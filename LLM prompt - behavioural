@@ -1,0 +1,25 @@
+   prompt = f"""You are comparing two BPMN models. Here are their task names extracted from the BPMN files:
+
+Model 1 ({name_1}) task list:
+{chr(10).join(tasks1)}
+
+Model 2 ({name_2}) task list:
+{chr(10).join(tasks2)}
+
+Now, follow these steps:
+
+1. Provide a similarity score between 0 and 1 and explain briefly.
+2. Match tasks with similar or equivalent meaning (1:1 mappings) and explain.
+3. Identify 1:N mappings (single task to multiple tasks in the other model). Example:
+"Approve Order" → ["Check Order", "Confirm Order"]
+4. Identify N:M mappings (group of tasks to another group). Example:
+["Validate Data", "Clean Data"] → ["Preprocess", "Transform"]
+5. Explicitly say "No 1:N mappings found." or "No N:M mappings found." if not found.
+6. Provide the flattened list of mappings as:
+"Task A" → "Task B"
+"Task A" → "Task B1"
+["Task A1", "Task A2"] → ["Task B1", "Task B2"]
+"""
+
+    response = ollama.chat(model='llama3', messages=[{'role': 'user', 'content': prompt}])
+    
