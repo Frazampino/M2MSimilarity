@@ -6,7 +6,7 @@ from pm4py.algo.evaluation.generalization import algorithm as generalization_eva
 from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
 # Carica i modelli
-net_a, im_a, fm_a = pnml_importer.apply("birthCertificate_p31.pnml")
+net_a, im_a, fm_a = pnml_importer.apply("birthCertificate_p32_var.pnml")
 net_b, im_b, fm_b = pnml_importer.apply("birthCertificate_p32.pnml")
 
 # Stampa transizioni visibili
@@ -14,29 +14,45 @@ print("Transizioni modello A:", [t.label for t in net_a.transitions if t.label])
 print("Transizioni modello B:", [t.label for t in net_b.transitions if t.label])
 
 # Simula log da modello A
-simulated_log = simulator.apply(
+simulated_log_a = simulator.apply(
     net_a,
     im_a,
     variant=simulator.Variants.BASIC_PLAYOUT,
     parameters={"max_trace_length": 15, "no_traces": 30}
 )
+print(f"Numero tracce simulate da modello A: {len(simulated_log_a)}")
 
-print(f"Numero tracce simulate: {len(simulated_log)}")
+# Simula log da modello B (per confronto)
+simulated_log_b = simulator.apply(
+    net_b,
+    im_b,
+    variant=simulator.Variants.BASIC_PLAYOUT,
+    parameters={"max_trace_length": 15, "no_traces": 30}
+)
+print(f"Numero tracce simulate da modello B: {len(simulated_log_b)}")
 
-# Calcolo fitness per ogni traccia rispetto al modello B
-results = alignments.apply(simulated_log, net_b, im_b, fm_b)
+# Calcolo fitness per ogni traccia del log simulato da A rispetto al modello B
+results = alignments.apply(simulated_log_a, net_b, im_b, fm_b)
+fitness_values = [res['fitness'] for res in results]
+fitness_media = sum(fitness_values) / len(fitness_values)
+print(f"Fitness media del log simulato da A rispetto a modello B: {fitness_media}")
 
-for i, res in enumerate(results):
-    print(f"Trace {i} fitness vs modello B: {res['fitness']}")
-
-# Calcolo precisione rispetto al modello B
-precision = precision_evaluator.apply(simulated_log, net_b, im_b, fm_b)
-print("Precision rispetto al modello B:", precision)
+# Calcolo precision rispetto al modello B sul log simulato da B (controllo)
+precision_b_vs_b = precision_evaluator.apply(simulated_log_b, net_b, im_b, fm_b)
+print("Precision rispetto al modello B (log simulato da B):", precision_b_vs_b)
 
 # Calcolo generalizzazione rispetto al modello B
-generalization = generalization_evaluator.apply(simulated_log, net_b, im_b, fm_b)
+generalization = generalization_evaluator.apply(simulated_log_a, net_b, im_b, fm_b)
 print("Generalization rispetto al modello B:", generalization)
 
 # Calcolo semplicità del modello B
 simplicity = simplicity_evaluator.apply(net_b)
 print("Simplicity del modello B:", simplicity)
+
+# Calcolo F1-score come media armonica tra fitness media e precision (log simulato da B)
+if fitness_media + precision_b_vs_b > 0:
+    f1_score = 2 * (precision_b_vs_b * fitness_media) / (precision_b_vs_b + fitness_media)
+else:
+    f1_score = 0.0
+
+print("F1-score (log simulato da A vs modello B):", f1_score)
